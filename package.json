@@ -1,17 +1,19 @@
 {
-  "name": "eslint-plugin-sort-keys-fix",
-  "version": "1.1.1",
+  "name": "eslint-plugin-sort-keys",
+  "version": "2.0.0",
   "description": "Fork of eslint rule that sorts keys in objects (https://eslint.org/docs/rules/sort-keys) with autofix enabled",
   "repository": {
-    "url": "https://github.com/leo-buneev/eslint-plugin-sort-keys-fix",
+    "url": "https://github.com/namnm/eslint-plugin-sort-keys",
     "type": "git"
   },
   "keywords": [
     "eslint",
-    "eslintplugin",
-    "eslint-plugin"
+    "sort keys",
+    "sort object",
+    "autofix",
+    "fixable"
   ],
-  "author": "Leonid Buneev <buneev.leonid@gmail.com>",
+  "author": "Nam Nguyen <nam@namnm.com>",
   "main": "lib/index.js",
   "scripts": {
     "lint": "eslint ./lib",
