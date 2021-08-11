@@ -19,17 +19,25 @@ module.exports = {
         properties: {
           caseSensitive: {
             type: 'boolean',
+            default: true,
           },
           natural: {
             type: 'boolean',
+            default: false,
           },
           minKeys: {
-            type: 'number',
+            type: 'integer',
+            minimum: 2,
+            default: 2,
           },
         },
         additionalProperties: false,
       },
     ],
+    messages: {
+      sortKeys:
+        "Expected object keys to be in {{natural}}{{insensitive}}{{order}}ending order. '{{thisName}}' should be before '{{prevName}}'.",
+    },
   },
 
   create(ctx) {
@@ -89,14 +97,13 @@ module.exports = {
           ctx.report({
             node,
             loc: node.key.loc,
-            message:
-              "Expected object keys to be in {{natual}}{{insensitive}}{{order}}ending order. '{{thisName}}' should be before '{{prevName}}'.",
+            messageId: 'sortKeys',
             data: {
               thisName,
               prevName,
               order,
               insensitive: insensitive ? 'insensitive ' : '',
-              natual: natural ? 'natural ' : '',
+              natural: natural ? 'natural ' : '',
             },
             fix(fixer) {
               // Check if already sorted
