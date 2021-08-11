@@ -1,82 +1,4 @@
-/**
- * @fileoverview Rule to require object keys to be sorted
- * @author Toru Nagashima
- */
-
-'use strict'
-
-// ------------------------------------------------------------------------------
-// Requirements
-// ------------------------------------------------------------------------------
-
-const astUtils = require('../util/ast-utils')
-
 const naturalCompare = require('natural-compare')
-
-// ------------------------------------------------------------------------------
-// Helpers
-// ------------------------------------------------------------------------------
-
-/**
- * Gets the property name of the given `Property` node.
- *
- * - If the property's key is an `Identifier` node, this returns the key's name
- *   whether it's a computed property or not.
- * - If the property has a static name, this returns the static name.
- * - Otherwise, this returns null.
- *
- * @param {ASTNode} node - The `Property` node to get.
- * @returns {string|null} The property name or null.
- * @private
- */
-function getPropertyName(node) {
-  const staticName = astUtils.getStaticPropertyName(node)
-
-  if (staticName !== null) {
-    return staticName
-  }
-
-  return node.key.name || null
-}
-
-/**
- * Functions which check that the given 2 names are in specific order.
- *
- * Postfix `I` is meant insensitive.
- * Postfix `N` is meant natual.
- *
- * @private
- */
-const isValidOrders = {
-  asc(a, b) {
-    return a <= b
-  },
-  ascI(a, b) {
-    return a.toLowerCase() <= b.toLowerCase()
-  },
-  ascN(a, b) {
-    return naturalCompare(a, b) <= 0
-  },
-  ascIN(a, b) {
-    return naturalCompare(a.toLowerCase(), b.toLowerCase()) <= 0
-  },
-  desc(a, b) {
-    return isValidOrders.asc(b, a)
-  },
-  descI(a, b) {
-    return isValidOrders.ascI(b, a)
-  },
-  descN(a, b) {
-    return isValidOrders.ascN(b, a)
-  },
-  descIN(a, b) {
-    return isValidOrders.ascIN(b, a)
-  },
-}
-
-// ------------------------------------------------------------------------------
-// Rule Definition
-// ------------------------------------------------------------------------------
 
 module.exports = {
   meta: {
@@ -88,7 +10,6 @@ module.exports = {
       recommended: false,
       url: 'https://github.com/namnm/eslint-plugin-sort-keys',
     },
-
     schema: [
       {
         enum: ['asc', 'desc'],
@@ -102,31 +23,35 @@ module.exports = {
           natural: {
             type: 'boolean',
           },
+          minKeys: {
+            type: 'number',
+          },
         },
         additionalProperties: false,
       },
     ],
   },
 
-  create(context) {
-    // Parse options.
-    const order = context.options[0] || 'asc'
-    const options = context.options[1]
+  create(ctx) {
+    // Parse options
+    const order = ctx.options[0] || 'asc'
+    const options = ctx.options[1]
     const insensitive = (options && options.caseSensitive) === false
-    const natual = Boolean(options && options.natural)
-    const isValidOrder = isValidOrders[order + (insensitive ? 'I' : '') + (natual ? 'N' : '')]
-
-    // The stack to save the previous property's name for each object literals.
+    const natural = Boolean(options && options.natural)
+    const isValidOrder =
+      isValidOrders[order + (insensitive ? 'I' : '') + (natural ? 'N' : '')]
+    const minKeys = Number(options && options.minKeys) || 2
+    // The stack to save the previous property's name for each object literals
     let stack = null
-
+    // Shared SpreadElement for ExperimentalSpreadProperty
     const SpreadElement = node => {
       if (node.parent.type === 'ObjectExpression') {
         stack.prevName = null
       }
     }
-
     return {
       ExperimentalSpreadProperty: SpreadElement,
+      SpreadElement,
 
       ObjectExpression() {
         stack = {
@@ -135,15 +60,15 @@ module.exports = {
           prevNode: null,
         }
       },
-
       'ObjectExpression:exit'() {
         stack = stack.upper
       },
 
-      SpreadElement,
-
       Property(node) {
         if (node.parent.type === 'ObjectPattern') {
+          return
+        }
+        if (node.parent.properties.length < minKeys) {
           return
         }
 
@@ -161,7 +86,7 @@ module.exports = {
         }
 
         if (!isValidOrder(prevName, thisName)) {
-          context.report({
+          ctx.report({
             node,
             loc: node.key.loc,
             message:
@@ -171,17 +96,20 @@ module.exports = {
               prevName,
               order,
               insensitive: insensitive ? 'insensitive ' : '',
-              natual: natual ? 'natural ' : '',
+              natual: natural ? 'natural ' : '',
             },
             fix(fixer) {
               // Check if already sorted
-              if (node.parent.__alreadySorted || node.parent.properties.__alreadySorted) {
+              if (
+                node.parent.__alreadySorted ||
+                node.parent.properties.__alreadySorted
+              ) {
                 return []
               }
               node.parent.__alreadySorted = true
               node.parent.properties.__alreadySorted = true
               //
-              const src = context.getSourceCode()
+              const src = ctx.getSourceCode()
               const props = node.parent.properties
               // Split into parts on each spread operator (empty key)
               const parts = []
@@ -197,14 +125,23 @@ module.exports = {
               parts.push(part)
               // Sort all parts
               parts.forEach(part => {
-                part.sort((p1, p2) => (isValidOrder(getPropertyName(p1), getPropertyName(p2)) ? -1 : 1))
+                part.sort((p1, p2) => {
+                  const n1 = getPropertyName(p1)
+                  const n2 = getPropertyName(p2)
+                  if (insensitive && n1.toLowerCase() === n2.toLowerCase()) {
+                    return 0
+                  }
+                  return isValidOrder(n1, n2) ? -1 : 1
+                })
               })
               // Perform fixes
               const fixes = []
               let newIndex = 0
               parts.forEach(part => {
                 part.forEach(p => {
-                  moveProperty(p, props[newIndex], fixer, src).forEach(f => fixes.push(f))
+                  moveProperty(p, props[newIndex], fixer, src).forEach(f =>
+                    fixes.push(f),
+                  )
                   newIndex++
                 })
                 newIndex++
@@ -244,13 +181,18 @@ const moveProperty = (thisNode, toNode, fixer, src) => {
     fixes.push(fixer.insertTextAfter(toPrev, txt))
     // In case the last comment overwrite the next token, add new line
     const after = toNode
-    if (toPrev.loc.end.line === after.loc.start.line && commentsBefore[commentsBefore.length - 1].type === 'Line') {
+    if (
+      toPrev.loc.end.line === after.loc.start.line &&
+      commentsBefore[commentsBefore.length - 1].type === 'Line'
+    ) {
       fixes.push(fixer.insertTextBefore(after, '\n'))
     }
   }
   // Move comments on the same line with this property
   const next = findComma(thisNode, src)
-  const commentsAfter = src.getCommentsAfter(next).filter(c => thisNode.loc.end.line === c.loc.start.line)
+  const commentsAfter = src
+    .getCommentsAfter(next)
+    .filter(c => thisNode.loc.end.line === c.loc.start.line)
   if (commentsAfter.length) {
     const b = next.range[1]
     const e = commentsAfter[commentsAfter.length - 1].range[1]
@@ -260,14 +202,16 @@ const moveProperty = (thisNode, toNode, fixer, src) => {
     fixes.push(fixer.insertTextAfter(toNext, txt))
     // In case the last comment overwrite the next token, add new line
     const after = src.getTokenAfter(toNext, { includeComments: true })
-    if (toNext.loc.end.line === after.loc.start.line && commentsAfter[commentsAfter.length - 1].type === 'Line') {
+    if (
+      toNext.loc.end.line === after.loc.start.line &&
+      commentsAfter[commentsAfter.length - 1].type === 'Line'
+    ) {
       fixes.push(fixer.insertTextBefore(after, '\n'))
     }
   }
   //
   return fixes
 }
-
 const findPrevLine = (node, src) => {
   let t = node
   while (t && t.range[0] >= node.parent.range[0]) {
@@ -281,4 +225,43 @@ const findPrevLine = (node, src) => {
 const findComma = (node, src) => {
   const t = src.getTokenAfter(node)
   return t && t.value === ',' ? t : node
+}
+
+const isValidOrders = {
+  asc: (a, b) => a <= b,
+  ascI: (a, b) => a.toLowerCase() <= b.toLowerCase(),
+  ascN: (a, b) => naturalCompare(a, b) <= 0,
+  ascIN: (a, b) => naturalCompare(a.toLowerCase(), b.toLowerCase()) <= 0,
+  desc: (a, b) => isValidOrders.asc(b, a),
+  descI: (a, b) => isValidOrders.ascI(b, a),
+  descN: (a, b) => isValidOrders.ascN(b, a),
+  descIN: (a, b) => isValidOrders.ascIN(b, a),
+}
+
+const getPropertyName = node => {
+  let prop
+  switch (node && node.type) {
+    case 'Property':
+    case 'MethodDefinition':
+      prop = node.key
+      break
+    case 'MemberExpression':
+      prop = node.property
+      break
+  }
+  switch (prop && prop.type) {
+    case 'Literal':
+      return String(prop.value)
+    case 'TemplateLiteral':
+      if (prop.expressions.length === 0 && prop.quasis.length === 1) {
+        return prop.quasis[0].value.cooked
+      }
+      break
+    case 'Identifier':
+      if (!node.computed) {
+        return prop.name
+      }
+      break
+  }
+  return (node.key && node.key.name) || null
 }
