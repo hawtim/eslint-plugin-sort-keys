@@ -20,6 +20,7 @@ module.exports = {
 
 ### Change log
 
+- 2.3.3: fix bug previous line when move comments
 - 2.3.2: some typo and improvement, add change log
 - 2.3.1: add support for `minKeys`, update unit tests, update dependencies and structure
 - 2.2.0: move comments together with property

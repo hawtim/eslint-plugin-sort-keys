@@ -220,14 +220,16 @@ const moveProperty = (thisNode, toNode, fixer, src) => {
   return fixes
 }
 const findPrevLine = (node, src) => {
-  let t = node
-  while (t && t.range[0] >= node.parent.range[0]) {
+  let t = src.getTokenBefore(node)
+  while (true) {
+    if (!t || t.range[0] < node.parent.range[0]) {
+      return null
+    }
     if (t.loc.end.line !== node.loc.start.line) {
       return t
     }
     t = src.getTokenBefore(t)
   }
-  return null
 }
 const findComma = (node, src) => {
   const t = src.getTokenAfter(node)
