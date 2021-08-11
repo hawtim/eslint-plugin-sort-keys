@@ -171,7 +171,7 @@ const moveProperty = (thisNode, toNode, fixer, src) => {
   fixes.push(fixer.replaceText(toNode, src.getText(thisNode)))
   // Move comments on top of this property, but do not move comments
   //    on the same line with the previous property
-  const prev = findPrevLine(thisNode, src)
+  const prev = findTokenPrevLine(thisNode, src)
   const cond = c => !prev || prev.loc.end.line !== c.loc.start.line
   const commentsBefore = src.getCommentsBefore(thisNode).filter(cond)
   if (commentsBefore.length) {
@@ -196,7 +196,7 @@ const moveProperty = (thisNode, toNode, fixer, src) => {
     }
   }
   // Move comments on the same line with this property
-  const next = findComma(thisNode, src)
+  const next = findCommaSameLine(thisNode, src) || thisNode
   const commentsAfter = src
     .getCommentsAfter(next)
     .filter(c => thisNode.loc.end.line === c.loc.start.line)
@@ -204,7 +204,7 @@ const moveProperty = (thisNode, toNode, fixer, src) => {
     const b = next.range[1]
     const e = commentsAfter[commentsAfter.length - 1].range[1]
     fixes.push(fixer.replaceTextRange([b, e], ''))
-    const toNext = findComma(toNode, src)
+    const toNext = findCommaSameLine(toNode, src) || toNode
     const txt = src.text.substring(b, e)
     fixes.push(fixer.insertTextAfter(toNext, txt))
     // In case the last comment overwrite the next token, add new line
@@ -219,21 +219,23 @@ const moveProperty = (thisNode, toNode, fixer, src) => {
   //
   return fixes
 }
-const findPrevLine = (node, src) => {
+const findTokenPrevLine = (node, src) => {
   let t = src.getTokenBefore(node)
   while (true) {
     if (!t || t.range[0] < node.parent.range[0]) {
       return null
     }
-    if (t.loc.end.line !== node.loc.start.line) {
+    if (t.loc.end.line < node.loc.start.line) {
       return t
     }
     t = src.getTokenBefore(t)
   }
 }
-const findComma = (node, src) => {
+const findCommaSameLine = (node, src) => {
   const t = src.getTokenAfter(node)
-  return t && t.value === ',' ? t : node
+  return t && t.value === ',' && node.loc.end.line === t.loc.start.line
+    ? t
+    : null
 }
 
 const isValidOrders = {

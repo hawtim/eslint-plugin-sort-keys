@@ -20,9 +20,10 @@ module.exports = {
 
 ### Change log
 
-- 2.3.3: fix bug previous line when move comments
-- 2.3.2: some typo and improvement, add change log
-- 2.3.1: add support for `minKeys`, update unit tests, update dependencies and structure
-- 2.2.0: move comments together with property
-- 2.1.0: fix multiple runs to completely sort the keys
-- 2.0.0: first publish from this forked repo, fix multiple runs to completely sort the keys
+- 2.3.4: fix bug move comments incorrectly on the same line with property
+- 2.3.3: fix bug move comments incorrectly on top of a multi-line property
+- 2.3.2: some typos and improvements, add change log
+- 2.3.1: add support for `minKeys`, update unit tests, dependencies and structure
+- 2.2.0: move comments together with the property
+- 2.1.0: fix bug multiple runs to complete the sort
+- 2.0.0: first publish from this forked repo, fix bug multiple runs to complete the sort
