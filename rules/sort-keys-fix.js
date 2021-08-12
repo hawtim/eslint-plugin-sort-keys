@@ -186,14 +186,6 @@ const moveProperty = (thisNode, toNode, fixer, src) => {
     const toPrev = src.getTokenBefore(toNode, { includeComments: true })
     const txt = src.text.substring(b, e)
     fixes.push(fixer.insertTextAfter(toPrev, txt))
-    // In case the last comment overwrite the next token, add new line
-    const after = toNode
-    if (
-      toPrev.loc.end.line === after.loc.start.line &&
-      commentsBefore[commentsBefore.length - 1].type === 'Line'
-    ) {
-      fixes.push(fixer.insertTextBefore(after, '\n'))
-    }
   }
   // Move comments on the same line with this property
   const next = findCommaSameLine(thisNode, src) || thisNode
@@ -207,14 +199,6 @@ const moveProperty = (thisNode, toNode, fixer, src) => {
     const toNext = findCommaSameLine(toNode, src) || toNode
     const txt = src.text.substring(b, e)
     fixes.push(fixer.insertTextAfter(toNext, txt))
-    // In case the last comment overwrite the next token, add new line
-    const after = src.getTokenAfter(toNext, { includeComments: true })
-    if (
-      toNext.loc.end.line === after.loc.start.line &&
-      commentsAfter[commentsAfter.length - 1].type === 'Line'
-    ) {
-      fixes.push(fixer.insertTextBefore(after, '\n'))
-    }
   }
   //
   return fixes
