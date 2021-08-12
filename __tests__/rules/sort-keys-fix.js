@@ -1044,6 +1044,34 @@ const test = {
       output: 'var obj = {\n  _:2, // comment\n  a:1,\n  b:3\n}',
     },
     {
+      code: 'var obj = {\n  a:1,\n  b:3, // comment\n  _:2\n}',
+      errors: [
+        "Expected object keys to be in ascending order. '_' should be before 'b'.",
+      ],
+      output: 'var obj = {\n  _:2,\n  a:1,\n  b:3 // comment\n}',
+    },
+    {
+      code: 'var obj = {\n  a:1,\n  b:2, // comment\n  _:3,\n}',
+      errors: [
+        "Expected object keys to be in ascending order. '_' should be before 'b'.",
+      ],
+      output: 'var obj = {\n  _:3,\n  a:1,\n  b:2, // comment\n}',
+    },
+    {
+      code: 'var obj = {\n  a:1,\n  b:3,\n  _:2 // comment\n}',
+      errors: [
+        "Expected object keys to be in ascending order. '_' should be before 'b'.",
+      ],
+      output: 'var obj = {\n  _:2, // comment\n  a:1,\n  b:3\n}',
+    },
+    {
+      code: 'var obj = {\n  a:1,\n  b:3,\n  _:2 // comment\n,}',
+      errors: [
+        "Expected object keys to be in ascending order. '_' should be before 'b'.",
+      ],
+      output: 'var obj = {\n  _:2, // comment\n  a:1,\n  b:3\n,}',
+    },
+    {
       code: 'var obj = {\n  // comment\n  // comment 2\n  a:1,\n  _:2,\n  b:3\n}',
       errors: [
         "Expected object keys to be in ascending order. '_' should be before 'a'.",
@@ -1058,6 +1086,15 @@ const test = {
       ],
       output:
         'var obj = {\n  _:2,\n  /* comment\n  comment 2 */\n  a:1,\n  b:3\n}',
+    },
+    // TODO
+    {
+      code: 'var obj = {/* comment\n  comment 2 */ // comment 3\n  a:1,\n  _:2,\n  b:3\n}',
+      errors: [
+        "Expected object keys to be in ascending order. '_' should be before 'a'.",
+      ],
+      output:
+        'var obj = {/* comment\n  comment 2 */ // comment 3\n  _:2,\n  a:1,\n  b:3\n}',
     },
   ],
 }

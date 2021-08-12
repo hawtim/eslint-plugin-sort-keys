@@ -18,9 +18,15 @@ module.exports = {
 }
 ```
 
-### Change log
+### TODO
 
-- 2.3.4: fix bug move comments incorrectly on the same line with property
+- [ ] Add support for key groups
+- [ ] Add css property key groups
+- [ ] Fix failed test cases
+
+### CHANGE LOG
+
+- 2.3.4: fix bug move comments incorrectly on the same line with the property
 - 2.3.3: fix bug move comments incorrectly on top of a multi-line property
 - 2.3.2: some typos and improvements, add change log
 - 2.3.1: add support for `minKeys`, update unit tests, dependencies and structure
