@@ -1,4 +1,4 @@
-const { RuleTester } = require('eslint')
+const { RuleTester, Linter } = require('eslint')
 const rule = require('../../rules/sort-keys-fix')
 
 const test = {
@@ -1027,21 +1027,19 @@ const test = {
       output: 'var obj = {[a]: -1, a:1, b:3, c:2}',
     },
     {
-      code: 'var obj = {a:1, c:{y:1, x:1}, b:1}',
-      errors: [
-        "Expected object keys to be in ascending order. 'x' should be before 'y'.",
-        "Expected object keys to be in ascending order. 'b' should be before 'c'.",
-      ],
-      // tested on real file and this works
-      // why it doesnt sort nested fields in unit test?
-      output: 'var obj = {a:1, b:1, c:{x:1, y:1}}',
-    },
-    {
       code: 'var obj = {\n  a:1,\n  _:2, // comment\n  b:3\n}',
       errors: [
         "Expected object keys to be in ascending order. '_' should be before 'a'.",
       ],
       output: 'var obj = {\n  _:2, // comment\n  a:1,\n  b:3\n}',
+    },
+    // multiple end-of-line comments
+    {
+      code: 'var obj = {\n a:3, // commenta\n _:2, // comment_\n}',
+      errors: [
+        "Expected object keys to be in ascending order. '_' should be before 'a'.",
+      ],
+      output: 'var obj = {\n _:2, // comment_\n a:3, // commenta\n}',
     },
     {
       code: 'var obj = {\n  a:1,\n  b:3, // comment\n  _:2\n}',
@@ -1101,3 +1099,26 @@ const test = {
 
 const tester = new RuleTester()
 tester.run('sort-keys-fix', rule, test)
+
+/**
+ * RuleTester has two limitations that apply to this rule:
+ * 1. It only applies a single pass of autofixing, whereas the CLI will run multiple passes.
+ * 2. It does not allow you to change the AST (which this rule is likely to do).
+ *
+ * Using the node Linter interface directly lets us test the result accurately compared to a what
+ * happens in reality.
+ */
+describe('Autofix tests', () => {
+  const linter = new Linter()
+  linter.defineRule('sort-keys-fix', rule)
+
+  it('should fix nested unsorted keys', () => {
+    const actual = linter.verifyAndFix('var obj = {a:1, c:{y:1, x:1}, b:1}', {
+      rules: {
+        'sort-keys-fix': 1,
+      },
+    })
+
+    expect(actual.output).toEqual('var obj = {a:1, b:1, c:{x:1, y:1}}')
+  })
+})

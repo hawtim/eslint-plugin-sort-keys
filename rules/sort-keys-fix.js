@@ -200,7 +200,6 @@ const moveProperty = (thisNode, toNode, fixer, src) => {
     const txt = src.text.substring(b, e)
     fixes.push(fixer.insertTextAfter(toNext, txt))
   }
-  //
   return fixes
 }
 const findTokenPrevLine = (node, src) => {
